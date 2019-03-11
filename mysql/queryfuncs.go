@@ -10,33 +10,36 @@ import (
 	"strings"
 )
 
-// QueryHelper is used as the basis for SQL functions
-type QueryHelper struct {
-	db *sql.DB
+// Model forms the basis of normal models used by the user
+// package. Models should be used as an embeded type in
+// Models outside of this package.
+type Model struct {
+	db      *sql.DB
+	success bool
 }
 
 // Select func is used in place of long SQL select statement.
 // takes the name of the table and a list of arguments/values
 // as params. For now, returns a maximum of 100 rows. Error
 // checking, defer.rows.Close() and Scan() are still needed
-func (q *QueryHelper) Select(cols []string, table, filterCol, filterVal string) (*sql.Rows, error) {
+func (m *Model) Select(cols []string, table, filterCol, filterVal string) (*sql.Rows, error) {
 
 	var query = `
 		SELECT ` + strings.Join(cols, ", ") + `
 		FROM ` + table + `
 		WHERE ` + filterCol + ` = ?;`
-	rows, err := q.db.Query(query, filterVal)
+	rows, err := m.db.Query(query, filterVal)
 	return rows, err
 }
 
 // Update - updates records. For best result filter on an ID value
-func (q *QueryHelper) Update(table, column, columnVal, filterCol, filterVal string) string {
+func (m *Model) Update(table, column, columnVal, filterCol, filterVal string) string {
 
 	var query = `UPDATE ` + table + ` 
 	SET ` + column + ` = ?
 	WHERE ` + filterCol + ` = ` + filterVal + `;`
 
-	stmt, err := q.db.Prepare(query)
+	stmt, err := m.db.Prepare(query)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -52,7 +55,7 @@ func (q *QueryHelper) Update(table, column, columnVal, filterCol, filterVal stri
 }
 
 // Insert inserts a single new record into the database.
-func (q *QueryHelper) Insert(table string, cols []string, vals []string) (int64, error) {
+func (m *Model) Insert(table string, cols []string, vals []string) (int64, error) {
 	if len(vals) == 0 {
 		var err = errors.New("No values given for the INSERT statement")
 		return 0, err
@@ -60,7 +63,7 @@ func (q *QueryHelper) Insert(table string, cols []string, vals []string) (int64,
 	var query = `
 		INSERT INTO ` + table + ` (` + strings.Join(cols, ", ") + `)
 		VALUES (?` + strings.Repeat(",?", len(vals)-1) + `);`
-	stmt, err := q.db.Prepare(query)
+	stmt, err := m.db.Prepare(query)
 	if err != nil {
 		err = fmt.Errorf("Insert: Error while preparing statement: %s", err)
 		return 0, err
@@ -85,12 +88,12 @@ func (q *QueryHelper) Insert(table string, cols []string, vals []string) (int64,
 }
 
 // Delete deletes a single item from the database
-func (q *QueryHelper) Delete(table, filterCol, filterVal string) (int64, error) {
+func (m *Model) Delete(table, filterCol, filterVal string) (int64, error) {
 	var query = `
 	DELETE FROM ` + table + `
 	WHERE ` + filterCol + ` = ?`
 
-	stmt, err := q.db.Prepare(query)
+	stmt, err := m.db.Prepare(query)
 	if err != nil {
 		err = fmt.Errorf("There was an issue preparing the query: Delete: %v", err)
 		return 0, err
