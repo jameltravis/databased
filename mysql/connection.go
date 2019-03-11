@@ -1,6 +1,10 @@
 package mysql
 
-import "database/sql"
+import (
+	"database/sql"
+
+	_ "github.com/go-sql-driver/mysql"
+)
 
 // Conn establishes a connection to a MySQL database.
 // Note that a `defer()` call is still needed after `MySQLConn()`
